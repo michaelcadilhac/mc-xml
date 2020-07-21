@@ -1,4 +1,4 @@
-# Created 2020-07-21 Tue 18:20
+# Created 2020-07-21 Tue 18:22
 #+TITLE: =mc-xml=: Simple XML to TeX and to D2L multiple choice quiz tools.
 #+AUTHOR: Michaël Cadilhac
 #+export: org-org-export-to-org
@@ -193,7 +193,7 @@ Further, if you plan on using =mc-tex2xml=, then the TeX file produces MUST read
 the variable =\qnum=, and only print that question (ideally with the
 =preview= package).  Here is a minimal example for this:
 
-#+begin_src xml
+#+begin_src tex
   \documentclass{article}
 
   %% For inparaenum.
@@ -255,8 +255,6 @@ the variable =\qnum=, and only print that question (ideally with the
   \end{enumerate}
   \end{document}
 #+end_src
-
-The produced file 
 
 ** XML to TeX
 
