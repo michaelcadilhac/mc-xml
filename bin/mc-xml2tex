@@ -1,1 +1,191 @@
-../../scripts/mc-xml2tex
+#!/bin/python
+
+import re
+from lxml.html import fromstring, Element
+import argparse
+import sys
+import numpy as np
+from scipy.optimize import linear_sum_assignment
+from dataclasses import dataclass, field
+
+from typing import List, Dict
+
+@dataclass
+class Question:
+    xml : Element = None
+    points : int = 1
+    answers : List[Element] = field(default_factory=list)
+    footer : str = ""
+    fixed : bool = False
+
+def isAttrTrue(elt, field):
+    return elt.get (field, "false") != "false"
+
+## This returns a permutation of [n], where each element is at most k away from
+## its original position, and the elements in F are not moved.  For this, I use
+## a constraint solving algorithm from scipy: we give a matrix of cost of
+## swapping i, j.  If i is too far from j, the cost is infinity, if i is in F
+## then it can only be moved to i (cost = 0, other positions = infinity), and
+## otherwise, the cost is a random number.
+def localPermWithFixed (n, k, F):
+    ar = []
+    for i in range (n):
+        line = [np.inf] * n
+        if i in F:
+            line[i] = 0
+        else:
+            for j in range (max (0, i - k), min (n, i + k + 1)):
+                line[j] = np.random.randint (2 * k + 1)
+        ar.append (line)
+    return linear_sum_assignment (ar)[1]
+
+
+nq = 0
+
+## Flush a subset of questions to the output, constructing more of the footer.
+def flushQuestions (questions, deltaq):
+    print ("deltaq " + str (deltaq), file=sys.stderr)
+    footer = ""
+    global nq
+    global printQuestion
+
+    if len (questions) == 0:
+        return footer
+
+    order = localPermWithFixed (len (questions), deltaq,
+                                [i for i, question in enumerate (questions) if question.fixed])
+
+    for curq in order:
+        question = questions[curq].xml
+        answers = questions[curq].answers
+        exec (printQuestion)
+        nq += 1
+        footer += str (nq) + questions[curq].footer + ", "
+
+    return footer
+
+def printUntil (infile, end):
+    for line in infile:
+        if end and end in line:
+            return
+        print (line, end = "")
+            
+def printPreamble (template):
+    printUntil (template, "%!EXTRAPREAMBLE")
+
+def printBeginDocument (template):
+    printUntil (template, "%!BEGIN_QUESTIONS")
+
+printQuestion = ""
+
+def readPrintQuestions (template):
+    global printQuestion
+    printQuestion = ""
+    for line in template:
+        if "%!END_QUESTIONS" in line:
+            return
+        printQuestion += line
+        
+
+def printEndDocument (template):
+    printUntil (template, False)
+    
+def parseQuestionXML(xmlfile, template, deltaq):
+    footer = "%% CORRECT (for mc-tex2quiz, do not remove): "
+    content = ""
+    questions = []
+    regex = re.compile(r"&(?!amp;|lt;|gt;)")
+    content = regex.sub("&amp;", xmlfile.read ())
+    root = fromstring(content)
+    printPreamble (template)
+    preamble = root.find ("preamble")
+    if preamble is not None:
+        print (preamble.text)
+    printBeginDocument (template)
+    readPrintQuestions (template)
+
+    ## If no deltaq was provided, try the one in the file, otherwise set to 0.
+    if deltaq == -1:
+        deltaq = int (root.get ("deltaq", "0"))
+
+    for nquestion in root.xpath (".//question | .//flush"):
+        ## Flush tags force the output of the current set of questions.
+        if nquestion.tag == "flush":
+            footer += flushQuestions (questions, deltaq)
+            questions = []
+            continue
+
+        question = Question ()
+        question.xml = nquestion
+
+        ## Question params
+        question.points = int (nquestion.get ("points", "1"))
+        isfixedanswers = isAttrTrue (nquestion, "hideanswers") or isAttrTrue (nquestion, "fixedanswers")
+
+        ## Read the answers
+        choices = []
+        fixed = []
+        notfixed = []
+        correct_choice = -1
+        for i, nchoice in enumerate (nquestion.findall ("choice")):
+            if isAttrTrue (nchoice, "correct"):
+                if correct_choice != -1:
+                    print ("ERROR: more than one correct answer to: " + nquestion.text, file=sys.stderr)
+                correct_choice = len (choices)
+            choices.append (nchoice)
+            if isAttrTrue (nchoice, "fixed"):
+                fixed.append (i)
+            else:
+                notfixed.append (i)
+
+        if correct_choice == -1:
+            print ("ERROR: no correct answer to: " + nquestion.text, file=sys.stderr)
+            continue
+
+        ## Randomize the answers, respecting fixedanswers (question-level) and
+        ## fixed (answer-level).  Do not randomize if answers are hidden.
+        if isfixedanswers:
+            perm = list (range (len (choices)))
+        else:
+            subperm = np.random.permutation(notfixed)
+            perm = []
+            j = 0
+            for i in range (0, len (choices)):
+                if fixed.count (i) > 0:
+                    perm.append (i)
+                else:
+                    perm.append (subperm[j])
+                    j += 1
+
+        question.fixed = isAttrTrue (nquestion, "fixed")
+        question.answers = [choices[p] for p in perm]
+
+        for pos, origpos in enumerate (perm):
+            if correct_choice == origpos:
+                question.footer = "@" + str (question.points) + ": "
+                question.footer += str (pos + 1) + "/" + str (len (perm))
+
+        questions.append (question)
+
+    footer += flushQuestions (questions, deltaq)
+
+    printEndDocument (template)
+    print (footer)
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Transform an XML Question file to TeX, randomizing questions and answers.')
+    parser.add_argument('file', metavar='FILE.xml', type=argparse.FileType('r'),
+                        help='input file')
+    parser.add_argument('template', metavar='TEMPLATE.tex', type=argparse.FileType('r'),
+                        help='template file')
+    parser.add_argument ('-d', '--deltaquestions', type=int, dest='deltaq', default=-1,
+                         help="""how far from its original position can a question end up,
+                                 overrides the deltaq in the XML file, if any
+                                 (default: 0, in place)""")
+    args = parser.parse_args ()
+    parseQuestionXML(args.file, args.template, args.deltaq)
+    
+      
+if __name__ == "__main__": 
+    main() 
