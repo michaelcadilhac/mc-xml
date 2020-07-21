@@ -1,0 +1,32 @@
+\documentclass{article}
+
+%% For inparaenum.
+\usepackage{paralist}
+
+%!EXTRAPREAMBLE
+
+\begin{document}
+\begin{enumerate}
+
+%!BEGIN_QUESTIONS
+def isAttrTrue (elt, field):
+    return elt.get (field, "false") != "false"
+print ("\\item " + question.text + "\n\n")
+if not isAttrTrue (question, "hideanswers"):
+  if isAttrTrue (question, "onepar"):
+    env = "inparaenum"
+  else:
+    env = "enumerate"
+  print ("\\begin{" + env + "}[A.]")
+  for ans in answers:
+    print ("\\item " + ans.text)
+    if isAttrTrue (ans, "correct"):
+      print (" (correct)")
+  print ("\\end{" + env + "}")
+points = question.get ("points", "1")
+print ("\\hfill (" + points + "pt" + \
+                ("s" if int (points) > 1 else "") + ")\n")
+%!END_QUESTIONS
+
+\end{enumerate}
+\end{document}

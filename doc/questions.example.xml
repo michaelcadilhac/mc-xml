@@ -1,0 +1,57 @@
+<mc deltaq=2>
+  <preamble>
+    \usepackage{amsmath}
+  </preamble>
+  <question>
+    This is the first question, but it could be moved around.  LaTeX can be freely used:
+    $$x < 2 \Rightarrow p = \begin{pmatrix} 3 & 4 \\ 8 & 9\end{pmatrix}$$
+    <choice correct>That is the correct answer, it could appear as A, B, or C.</choice>
+    <choice>Incorrect answer appearing as A, B, or C.</choice>
+    <choice>Incorrect answer appearing as A, B, or C.</choice>
+    <choice fixed>Incorrect answer appearing as D (useful for ``none of the above'').</choice>
+  </question>
+
+  <question points=2 fixed>
+    This is a question worth 2 points, which always appear in second position in
+    the quiz (keyword \texttt{fixed}).
+    <choice>Answer A, B, or C.</choice>
+    <choice>Answer A, B, or C.</choice>
+    <choice>Answer A, B, or C.</choice>
+    <choice correct fixed>Answer D, which is correct.</choice>
+  </question>
+
+  <flush/>
+
+  <question fixedanswers points=2>
+    As we issued a \texttt{flush} just before, all the questions appearing
+    before this one in the XML file will be output before it in the TeX output.
+    Also, since this question has keyword \texttt{fixedanswers}, all the answers
+    will appear in the order of the XML file.
+    <choice>$L$ is undecidable.</choice>
+    <choice>$L$ is Turing-recognizable, but not co-Turing-recognizable.</choice>
+    <choice>$L$ is co-Turing-recognizable, but not Turing-recognizable.</choice>
+    <choice correct>$L$ is regular.</choice>
+  </question>
+
+  <question fixedanswers onepar points=2 fixed>
+    In this question, the answers are formated in a single paragraph, rather
+    than each on their line.  It is the job of the TeX template to implement
+    this flag; the script itsef has no notion of \text{onepar}.
+    <choice correct>Yes.</choice>
+    <choice>No.</choice>
+    <choice>It is impossible to know.</choice>
+    <choice>The question is not well-defined.</choice>
+  </question>
+
+  <question hideanswers fixedanswers>
+    In this question, we explain answers A, B, C, D in the text, for some reason
+    (my use case was some code where four lines where labeled A, B, C, and D).
+    The TeX file will be in charge of not printing the choice of answers.
+    (\texttt{fixedanswers} should thus be used---although, for historical
+    reason, this is automatically the case.)
+    <choice correct>A</choice>
+    <choice>B</choice>
+    <choice>C</choice>
+    <choice>D</choice>
+  </question>
+</mc>

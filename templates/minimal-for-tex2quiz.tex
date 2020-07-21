@@ -1,0 +1,60 @@
+\documentclass{article}
+
+%% For inparaenum.
+\usepackage{paralist}
+
+%% If there are no selected question, show everything.
+\newif\ifnoqnum
+\ifcsname qnum\endcsname
+  \usepackage[active, tightpage]{preview}
+  \setlength\PreviewBorder{0pt}%
+  \noqnumfalse
+\else
+  \usepackage{preview}
+  \noqnumtrue
+\fi
+
+%!EXTRAPREAMBLE
+
+\begin{document}
+\begin{enumerate}
+\begin{preview}
+
+%!BEGIN_QUESTIONS
+def isAttrTrue (elt, field):
+    return elt.get (field, "false") != "false"
+
+## We count the number of questions, and if it matches \qnum, print it.
+global nquestion
+if not 'nquestion' in globals ():
+  nquestion = 0
+nquestion += 1
+
+## Bypass the test if no \qnum were given, to print everything.
+print ("\\ifnoqnum\\gdef\\qnum{" + str (nquestion) + "}\\fi")
+## This if holds iff qnum = nquestion
+print ("\\ifnum\qnum=" + str (nquestion) + "")
+
+## Same as minimal.tex
+print ("\\item " + question.text + "\n\n")
+if not isAttrTrue (question, "hideanswers"):
+  if isAttrTrue (question, "onepar"):
+    env = "inparaenum"
+  else:
+    env = "enumerate"
+  print ("\\begin{" + env + "}[A.]")
+  for ans in answers:
+    print ("\\item " + ans.text)
+    if isAttrTrue (ans, "correct"):
+      print (" (correct)")
+  print ("\\end{" + env + "}")
+points = question.get ("points", "1")
+print ("\\hfill (" + points + "pt" + \
+                ("s" if int (points) > 1 else "") + ")\n")
+
+print ("\\fi")
+%!END_QUESTIONS
+
+\end{preview}
+\end{enumerate}
+\end{document}
