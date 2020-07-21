@@ -1,4 +1,4 @@
-# Created 2020-07-21 Tue 18:22
+# Created 2020-07-21 Tue 18:23
 #+TITLE: =mc-xml=: Simple XML to TeX and to D2L multiple choice quiz tools.
 #+AUTHOR: Michaël Cadilhac
 #+export: org-org-export-to-org
@@ -312,6 +312,6 @@ everything is compiled in the =pdf/= directory
 
 * Requirements
 
-- $\LaTeX$ with a recent =latexmk=
+- LaTeX with a recent =latexmk=
 - Python3, with =numpy=, =scipy=.
 - =zsh=

@@ -158,7 +158,7 @@ everything is compiled in the =pdf/= directory
 
 * Requirements
 
-- $\LaTeX$ with a recent =latexmk=
+- LaTeX with a recent =latexmk=
 - Python3, with =numpy=, =scipy=.
 - =zsh=
 
