@@ -1,7 +1,5 @@
-# Created 2020-07-21 Tue 18:18
 #+TITLE: =mc-xml=: Simple XML to TeX and to D2L multiple choice quiz tools.
-#+AUTHOR: Michaël Cadilhac
-#+export: org-org-export-to-org
+#+EXPORT: org-org-export-to-org
 
 This package provides two tools:
 - =mc-xml2tex=: This takes as input an XML description of multiple-choice
@@ -26,65 +24,7 @@ The first tool can be used as is, but the second requires the first.
 
 The format used for questions is best presented with an example:
 
-#+begin_src xml
-  <mc deltaq=2>
-    <preamble>
-      \usepackage{amsmath}
-    </preamble>
-    <question>
-      This is the first question, but it could be moved around.  LaTeX can be freely used:
-      $$x < 2 \Rightarrow p = \begin{pmatrix} 3 & 4 \\ 8 & 9\end{pmatrix}$$
-      <choice correct>That is the correct answer, it could appear as A, B, or C.</choice>
-      <choice>Incorrect answer appearing as A, B, or C.</choice>
-      <choice>Incorrect answer appearing as A, B, or C.</choice>
-      <choice fixed>Incorrect answer appearing as D (useful for ``none of the above'').</choice>
-    </question>
-
-    <question points=2 fixed>
-      This is a question worth 2 points, which always appear in second position in
-      the quiz (keyword \texttt{fixed}).
-      <choice>Answer A, B, or C.</choice>
-      <choice>Answer A, B, or C.</choice>
-      <choice>Answer A, B, or C.</choice>
-      <choice correct fixed>Answer D, which is correct.</choice>
-    </question>
-
-    <flush/>
-
-    <question fixedanswers points=2>
-      As we issued a \texttt{flush} just before, all the questions appearing
-      before this one in the XML file will be output before it in the TeX output.
-      Also, since this question has keyword \texttt{fixedanswers}, all the answers
-      will appear in the order of the XML file.
-      <choice>$L$ is undecidable.</choice>
-      <choice>$L$ is Turing-recognizable, but not co-Turing-recognizable.</choice>
-      <choice>$L$ is co-Turing-recognizable, but not Turing-recognizable.</choice>
-      <choice correct>$L$ is regular.</choice>
-    </question>
-
-    <question fixedanswers onepar points=2 fixed>
-      In this question, the answers are formated in a single paragraph, rather
-      than each on their line.  It is the job of the TeX template to implement
-      this flag; the script itsef has no notion of \text{onepar}.
-      <choice correct>Yes.</choice>
-      <choice>No.</choice>
-      <choice>It is impossible to know.</choice>
-      <choice>The question is not well-defined.</choice>
-    </question>
-
-    <question hideanswers fixedanswers>
-      In this question, we explain answers A, B, C, D in the text, for some reason
-      (my use case was some code where four lines where labeled A, B, C, and D).
-      The TeX file will be in charge of not printing the choice of answers.
-      (\texttt{fixedanswers} should thus be used---although, for historical
-      reason, this is automatically the case.)
-      <choice correct>A</choice>
-      <choice>B</choice>
-      <choice>C</choice>
-      <choice>D</choice>
-    </question>
-  </mc>
-#+end_src
+#+INCLUDE: doc/questions.example.xml src xml
 
 The nodes and attributes that are understood by the scripts are:
 - ~<mc deltaq=N>~: This indicates how far a question can end up, compared to
@@ -136,40 +76,7 @@ Again, this is best presented with a minimal example.  This first template is a
 minimal example for =mc-xml2tex=; we will see that if we plan to use
 =mc-tex2quiz= afterward, the minimal template is slightly more complicated.
 
-#+begin_src tex
-  \documentclass{article}
-
-  %% For inparaenum.
-  \usepackage{paralist}
-
-  %!EXTRAPREAMBLE
-
-  \begin{document}
-  \begin{enumerate}
-
-  %!BEGIN_QUESTIONS
-  def isAttrTrue (elt, field):
-      return elt.get (field, "false") != "false"
-  print ("\\item " + question.text + "\n\n")
-  if not isAttrTrue (question, "hideanswers"):
-    if isAttrTrue (question, "onepar"):
-      env = "inparaenum"
-    else:
-      env = "enumerate"
-    print ("\\begin{" + env + "}[A.]")
-    for ans in answers:
-      print ("\\item " + ans.text)
-      if isAttrTrue (ans, "correct"):
-        print (" (correct)")
-    print ("\\end{" + env + "}")
-  points = question.get ("points", "1")
-  print ("\\hfill (" + points + "pt" + \
-                  ("s" if int (points) > 1 else "") + ")\n")
-  %!END_QUESTIONS
-
-  \end{enumerate}
-  \end{document}
-#+end_src
+#+INCLUDE: templates/minimal.tex src tex
 
 The script =mc-xml2tex= will:
 1. Print everything up to =%!EXTRAPREAMBLE=,
@@ -193,66 +100,7 @@ Further, if you plan on using =mc-tex2xml=, then the TeX file produces MUST read
 the variable =\qnum=, and only print that question (ideally with the
 =preview= package).  Here is a minimal example for this:
 
-\documentclass{article}
-
-%% For inparaenum.
-\usepackage{paralist}
-
-%% If there are no selected question, show everything.
-\newif\ifnoqnum
-\ifcsname qnum\endcsname
-  \usepackage[active, tightpage]{preview}
-  \setlength\PreviewBorder{0pt}%
-  \noqnumfalse
-\else
-  \usepackage{preview}
-  \noqnumtrue
-\fi
-
-%!EXTRAPREAMBLE
-
-\begin{document}
-\begin{enumerate}
-\begin{preview}
-
-%!BEGIN_QUESTIONS
-def isAttrTrue (elt, field):
-    return elt.get (field, "false") != "false"
-
-## We count the number of questions, and if it matches \qnum, print it.
-global nquestion
-if not 'nquestion' in globals ():
-  nquestion = 0
-nquestion += 1
-
-## Bypass the test if no \qnum were given, to print everything.
-print ("\\ifnoqnum\\gdef\\qnum{" + str (nquestion) + "}\\fi")
-## This if holds iff qnum = nquestion
-print ("\\ifnum\qnum=" + str (nquestion) + "")
-
-## Same as minimal.tex
-print ("\\item " + question.text + "\n\n")
-if not isAttrTrue (question, "hideanswers"):
-  if isAttrTrue (question, "onepar"):
-    env = "inparaenum"
-  else:
-    env = "enumerate"
-  print ("\\begin{" + env + "}[A.]")
-  for ans in answers:
-    print ("\\item " + ans.text)
-    if isAttrTrue (ans, "correct"):
-      print (" (correct)")
-  print ("\\end{" + env + "}")
-points = question.get ("points", "1")
-print ("\\hfill (" + points + "pt" + \
-                ("s" if int (points) > 1 else "") + ")\n")
-
-print ("\\fi")
-%!END_QUESTIONS
-
-\end{preview}
-\end{enumerate}
-\end{document}
+#+INCLUDE: templates/minimal-for-tex2quiz.tex src xml
 
 The produced file 
 
@@ -315,3 +163,4 @@ everything is compiled in the =pdf/= directory
 - $\LaTeX$ with a recent =latexmk=
 - Python3, with =numpy=, =scipy=.
 - =zsh=
+
