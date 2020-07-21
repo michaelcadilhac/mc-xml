@@ -1,4 +1,5 @@
 #+TITLE: =mc-xml=: Simple XML to TeX and to D2L multiple choice quiz tools.
+#+EXPORT: org-md-export-to-markdown
 
 This package provides two tools:
 - =mc-xml2tex=: This takes as input an XML description of multiple-choice
@@ -99,7 +100,7 @@ Further, if you plan on using =mc-tex2xml=, then the TeX file produces MUST read
 the variable =\qnum=, and only print that question (ideally with the
 =preview= package).  Here is a minimal example for this:
 
-#+INCLUDE: templates/minimal-for-tex2xml.tex
+#+INCLUDE: templates/minimal-for-tex2quiz.tex
 
 The produced file 
 
