@@ -1,4 +1,4 @@
-#+TITLE: =mc-xml=: Simple XML to TeX and to D2L multiple choice quiz tools.
+#+TITLE: =mc-xml=: XML to TeX to D2L multiple choice quiz tools.
 #+EXPORT: org-org-export-to-org
 
 This package provides two tools:
