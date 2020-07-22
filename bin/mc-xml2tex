@@ -174,7 +174,7 @@ def parseQuestionXML(xmlfile, template, deltaq):
 def main():
     parser = argparse.ArgumentParser(
         description='Transform an XML Question file to TeX, randomizing questions and answers.')
-    parser.add_argument('file', metavar='FILE.xml', type=argparse.FileType('r'),
+    parser.add_argument('file', metavar='QUESTIONS.xml', type=argparse.FileType('r'),
                         help='input file')
     parser.add_argument('template', metavar='TEMPLATE.tex', type=argparse.FileType('r'),
                         help='template file')

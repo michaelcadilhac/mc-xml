@@ -1,110 +1,108 @@
-#!/bin/zsh -f
+#!/bin/python
 
-BASE_URL=https://michael.cadilhac.name/private/quiz/
-PICS_DIR=pics/
-LATEXMK=(latexmk -quiet)
-BUILD_DIR=_build/
+import os
+import re
+import hashlib
+import string
+import argparse
+import subprocess
 
-usage () {
-    cat <<EOF
-usage: $1 [-h] [-b BASE_URL] [-o PICS_DIR] [-l LATEXMK] [-B BUILD_DIR] MC.tex QUIZ.csv
-  Compiles each question in MC.tex to a PNG file, and creates a CSV quiz
-  file for D2L.  The PNG are output in the PICS_DIR directory.
-
-Options:
-  -b BASE_URL: The base URL where PNG files will be stored.
-               (default: $BASE_URL)
-  -o PICS_DIR: The directory in which PNGs go.
-               (default: $PICS_DIR)
-  -l LATEXMK: latexmk command to use.
-               (default: $LATEXMK)
-  -B BUILD_DIR: The directory in which PDFs and aux files go before being converted to PNGs.
-               (default: $BUILD_DIR)
-  -h: Prints this help message.
-
-Notes:
-  This program relies on latexmk.  The file MC.tex MUST use the variable \qnum.
-EOF
-    exit 1
-}
-
-while getopts 'hb:B:o:l:' c; do
-    case $c in
-        h) usage $0;;
-        b) BASE_URL=$OPTARG;;
-        B) BUILD_DIR=$OPTARG;;
-        l) eval "LATEXMK=($OPTARG)";;
-        o) PICS_DIR=$OPTARG;;
-    esac
-done
-
-shift $((OPTIND - 1))
-
-(( $# == 2 )) || usage $0
-
-MCTEX=$1
-QUIZCSV=$2
-[[ -e $MCTEX ]] || { echo "$MCTEX: file not found." >&2; usage $0 }
-
-## Change if alphabet changes.
-ALPHABET="ABCDEFGHIJKLMNOP"
-
-mkdir -p $PICS_DIR || exit 1
-rm -f $QUIZCSV || exit 1
-touch $QUIZCSV || exit 1
-
-i=0
-tail -n1 $MCTEX | sed 's/%% CORRECT[^:]*: //' | tr -d ' ' | tr ',' '\n' | \
-    while read question; do
-        ## Question is of the shape num@points:answer/#choices
-        case $question; in
-            '') continue;;
-            *@*:*/*) ;;
-            *) echo "Question in footer reads $question: syntax error." >&2
-               exit 2;;
-        esac
-
-        (( ++i ))
-        echo "Preparing question $i"
-
-        ar=("${(@s/:/)${question//[^0-9]/:}}")
-        num=$ar[1]
-        points=$ar[2]
-        correct=$ar[3]
-        nchoices=$ar[4]
-
-        jobname=${${MCTEX:t}/.tex/}-$num
-        pretex="\\def\\qnum{$num}"
-
-        ## Compiling
-        cmd=($LATEXMK -jobname=$jobname -pretex=$pretex -usepretex -outdir=$BUILD_DIR)
-        $cmd || { echo "Compilation error while running $cmd"; exit 2 }
-
-        ## Converting to PNG
-        md5=$(md5sum $BUILD_DIR/$jobname.pdf | cut -d' ' -f1)
-        if [[ ! -e $PICS_DIR/$md5.png || $BUILD_DIR/$jobname.pdf -nt $PICS_DIR/$md5.png ]]; then
-            convert -density 200 $BUILD_DIR/$jobname.pdf -colorspace RGB $PICS_DIR/$md5.png ||
-                { echo "Conversion error.  Aborted."; exit 3 }
-        fi
-
-        truth=(0 0 0 0 0)
-        truth[$correct]=100  # in zsh, arrays start at 1
-
-        ## Write question in CSV
-        cat >> $QUIZCSV <<EOF
-NewQuestion,MC,
-Title,Question $i
-QuestionText,<img width="100%" src="$BASE_URL/$md5.png">,HTML
-Points,$points,
+## Defaults and constants
+QUESTION_BLOCK = """NewQuestion,MC,
+Title,Question {qnum}
+QuestionText,<img width="100%" src="{url}>,HTML
+Points,{points},
 Difficulty,1,
-EOF
-        ## Write answers in CSV
-        for j in {1..$nchoices}; do
-            if ((correct == j)); then
-                truth=100
-            else
-                truth=0
-            fi
-            echo "Option,$truth,\"Answer $ALPHABET[$j].\",HTML,\"no feedback\"" >> $QUIZCSV
-        done
-    done
+"""
+ANSWER_BLOCK = """Option,{truth},"Answer {letter}.",HTML,"no feedback"
+"""
+DEFAULT_BASE_URL = "https://michael.cadilhac.name/private/quiz/"
+DEFAULT_PICS_DIR = "pics/"
+DEFAULT_LATEXMK = "latexmk -quiet"
+DEFAULT_BUILD_DIR = "_build/"
+
+
+## From https://stackoverflow.com/questions/3431825/generating-an-md5-checksum-of-a-file
+def md5file (fname):
+    hash_md5 = hashlib.md5()
+    try:
+        with open(fname, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+    except IOError as x:
+        print ("error: cannot compute md5 of " + fname)
+        exit (2)
+    return hash_md5.hexdigest()
+
+def prepquestion (question, args):
+    qnum, points, correct, nchoices = re.findall ('\d+', question)
+    jobname = os.path.splitext (os.path.basename (args.infile.name))[0] + "-" + qnum
+    pretex = r'\def\qnum{' + str (qnum) + '}'
+    cmd = args.latexmk + [ '-jobname=' + jobname, '-pretex=' + pretex,
+                           '-usepretex', '-outdir=' + args.builddir,
+                           args.infile.name ]
+    if subprocess.call (cmd) != 0:
+        print ("error: compilation error while running\n\t" + cmd)
+        exit (2)
+
+    pdf = args.builddir + "/" + jobname + ".pdf"
+    md5dotpng = md5file (pdf) + ".png"
+    png = args.picsdir + "/" + md5dotpng
+    if not os.access (png, os.R_OK) or (os.path.getctime (pdf) > os.path.getctime (png)):
+        cmd = ['convert', '-density', '200', pdf, '-colorspace', 'RGB', png]
+        if subprocess.call (cmd) != 0:
+            print ("error: conversion error while running\n\t" + cmd)
+            exit (3)
+
+    args.outfile.write (QUESTION_BLOCK.format (qnum = qnum,
+                                               url = args.baseurl + "/" + md5dotpng,
+                                               points = points))
+
+    for choice in range (int (nchoices)):
+        if int (correct) - 1 == choice:
+            truth = 100
+        else:
+            truth = 0
+        args.outfile.write (ANSWER_BLOCK.format (truth = truth, letter = string.ascii_uppercase[choice]))
+    
+    
+    
+
+def tex2quiz (args):
+    correct = args.infile.readlines()[-1]
+    nq = 0
+    for question in re.findall ('\d+@\d+: \d+/\d+', correct):
+        nq += 1
+        print ("Preparing question " + str (nq))
+        if (nq != int (re.findall ('\d+', question)[0])):
+            print ("warning: questions do not appear in order in the footer")
+            print ("         this should not happen if the mc-xml2tex is used, so")
+            print ("         let's hope you know what you are doing")
+        prepquestion (question, args)
+
+    if nq == 0:
+        print ("error: no question found in footer; was the input TeX file prepared by mc-xml2tex?")
+        exit (1)
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Transform a TeX file to a D2L quiz, creating PNG for each question.')
+    parser.add_argument('infile', metavar='QUIZ.tex', type=argparse.FileType('r'),
+                        help='input file, as generated by mc-xml2tex')
+    parser.add_argument('outfile', metavar='QUIZ.csv', type=argparse.FileType('w'),
+                        help='output file for D2L')
+    parser.add_argument ('-b', '--base-url', type=str, dest='baseurl', default=DEFAULT_BASE_URL,
+                         help='The base URL where PNG files will be stored.')
+    parser.add_argument ('-p', '--pics-dir', type=str, dest='picsdir', default=DEFAULT_PICS_DIR,
+                         help='The directory in which PNGs go.')
+    parser.add_argument ('-l', '--latexmk', type=str, dest='latexmk', default=DEFAULT_LATEXMK,
+                         help='latexmk command to use.')
+    parser.add_argument ('-B', '--build-dir', type=str, dest='builddir', default=DEFAULT_BUILD_DIR,
+                         help='The directory in which PDFs and aux files go before being converted to PNGs.')
+    args = parser.parse_args ()
+    args.latexmk = re.split ('\s+', args.latexmk)
+    tex2quiz (args)
+    
+      
+if __name__ == "__main__": 
+    main() 
