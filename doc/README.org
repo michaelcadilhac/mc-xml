@@ -1,4 +1,4 @@
-#+TITLE: =mc-xml=: XML to TeX to D2L multiple choice quiz tools.
+#+TITLE: =mc-xml=: XML to TeX to D2L multiple choice quiz tools
 #+EXPORT: org-org-export-to-org
 
 This package provides two tools:
@@ -112,7 +112,7 @@ The script =mc-xml2tex= will:
 5. Print the rest of the TeX file.
 
 The Python snippet reads the object =question= and the list =answers= and prints
-them.  These are [[https://lxml.de/tutorial.html#the-element-class][=Element=]] objects, that is, the corresponding XML node.  The
+them.  These are [[https://lxml.de/tutorial.html#the-element-class][Element]] objects, that is, the corresponding XML node.  The
 main properties of interest are =text=, the actual text of the node, and the
 =get()= method to retrieve attributes (=Element= behaves like a list).  The
 children of the nodes are accessed with, e.g., =find()=, although this is not
