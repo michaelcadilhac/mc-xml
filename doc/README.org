@@ -24,7 +24,7 @@ The first tool can be used as is, but the second requires the first:
    template.tex ──┘ ┖────────────┘              ┖─────────────┘ └─ pics/*.png
 #+end_example
 
-* Screenshots
+* Screenshots & Demo
 
 =mc-xml2tex= will produce a TeX file that compiles, depending on the template
 TeX file, to:
@@ -35,6 +35,11 @@ This TeX file can in turn be converted to a CSV that D2L can read to create a
 quiz:
 
 [[file:doc/d2l-example.png]]
+
+Here is a video demo:
+
+[[http://www.youtube.com/watch?v=56M1wD7Z838][http://img.youtube.com/vi/56M1wD7Z838/0.jpg]]
+
 
 * Usage
 
