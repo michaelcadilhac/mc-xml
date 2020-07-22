@@ -10,13 +10,19 @@ This package provides two tools:
   prints it.
 
 - =mc-tex2quiz=: This reads metadata from the TeX file about the questions
-  (correct answers & points), then compiles the TeX file with a parameter.  The
-  TeX file is in charge of isolating the question indicated in the parameter and
-  only print that question.  The script then converts this output to PNG, and
-  produces a CSV file that describes the quiz (with questions sourced from the
-  PNG); that CSV in turn can be used as is in D2L.
+  (correct answers & points), then compiles the TeX file with a numerical
+  parameter.  The TeX file is in charge of isolating the question indicated in
+  the parameter and only print that question.  The script then converts this
+  output to PNG, and produces a CSV file that describes the quiz (with questions
+  sourced from the PNG); that CSV in turn can be used as is in D2L.
 
-The first tool can be used as is, but the second requires the first.
+The first tool can be used as is, but the second requires the first:
+
+#+begin_example
+                    ┏━━━━━━━━━━━━┑              ┏━━━━━━━━━━━━━┑
+  questions.xml ──┬─┨ mc-xml2tex ├── quiz.tex ──┨ mc-tex2quiz ├─┬─ quiz.csv
+   template.tex ──┘ ┖────────────┘              ┖─────────────┘ └─ pics/*.png
+#+end_example
 
 * Screenshots
 
