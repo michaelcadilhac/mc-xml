@@ -65,9 +65,6 @@ def prepquestion (question, args):
             truth = 0
         args.outfile.write (ANSWER_BLOCK.format (truth = truth, letter = string.ascii_uppercase[choice]))
     
-    
-    
-
 def tex2quiz (args):
     correct = args.infile.readlines()[-1]
     nq = 0
