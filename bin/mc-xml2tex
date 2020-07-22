@@ -44,7 +44,6 @@ nq = 0
 
 ## Flush a subset of questions to the output, constructing more of the footer.
 def flushQuestions (questions, deltaq):
-    print ("deltaq " + str (deltaq), file=sys.stderr)
     footer = ""
     global nq
     global printQuestion
