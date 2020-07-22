@@ -1,4 +1,4 @@
-# Created 2020-07-21 Tue 19:41
+# Created 2020-07-21 Tue 19:49
 #+TITLE: =mc-xml=: Simple XML to TeX and to D2L multiple choice quiz tools.
 #+AUTHOR: Michaël Cadilhac
 #+export: org-org-export-to-org
@@ -20,6 +20,7 @@ This package provides two tools:
 
 The first tool can be used as is, but the second requires the first:
 
+#+ATTR_HTML: :style font-family: monospace
 #+begin_example
                     ┏━━━━━━━━━━━━┑              ┏━━━━━━━━━━━━━┑
   questions.xml ──┬─┨ mc-xml2tex ├── quiz.tex ──┨ mc-tex2quiz ├─┬─ quiz.csv
