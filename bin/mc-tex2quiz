@@ -10,7 +10,7 @@ import subprocess
 ## Defaults and constants
 QUESTION_BLOCK = """NewQuestion,MC,
 Title,Question {qnum}
-QuestionText,<img width="100%" src="{url}>,HTML
+QuestionText,<img width="100%" src="{url}">,HTML
 Points,{points},
 Difficulty,1,
 """
@@ -42,7 +42,7 @@ def prepquestion (question, args):
                            '-usepretex', '-outdir=' + args.builddir,
                            args.infile.name ]
     if subprocess.call (cmd) != 0:
-        print ("error: compilation error while running\n\t" + cmd)
+        print ("error: compilation error while running\n\t" + ' '.join (cmd))
         exit (2)
 
     pdf = args.builddir + "/" + jobname + ".pdf"
@@ -51,7 +51,7 @@ def prepquestion (question, args):
     if not os.access (png, os.R_OK) or (os.path.getctime (pdf) > os.path.getctime (png)):
         cmd = ['convert', '-density', '200', pdf, '-colorspace', 'RGB', png]
         if subprocess.call (cmd) != 0:
-            print ("error: conversion error while running\n\t" + cmd)
+            print ("error: conversion error while running\n\t" + ' '.join (cmd))
             exit (3)
 
     args.outfile.write (QUESTION_BLOCK.format (qnum = qnum,
@@ -99,6 +99,8 @@ def main():
                          help='The directory in which PDFs and aux files go before being converted to PNGs.')
     args = parser.parse_args ()
     args.latexmk = re.split ('\s+', args.latexmk)
+    os.makedirs (args.picsdir, exist_ok=True)
+    os.makedirs (args.builddir, exist_ok=True)
     tex2quiz (args)
     
       
