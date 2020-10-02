@@ -101,6 +101,7 @@ The format used for questions is best presented with an example:
       <choice>C</choice>
       <choice>D</choice>
     </question>
+    <include file="someotherfile.xml"/>
   </mc>
 #+end_src
 
