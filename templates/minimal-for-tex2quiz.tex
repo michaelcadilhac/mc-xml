@@ -1,7 +1,5 @@
 \documentclass{article}
-
-%% For inparaenum.
-\usepackage{paralist}
+\usepackage[inline]{enumitem}
 
 %% If there are no selected question, show everything.
 \newif\ifnoqnum
@@ -17,44 +15,61 @@
 %!EXTRAPREAMBLE
 
 \begin{document}
-\begin{enumerate}
-\begin{preview}
 
 %!BEGIN_QUESTIONS
+import string
+
 def isAttrTrue (elt, field):
     return elt.get (field, "false") != "false"
 
 ## We count the number of questions, and if it matches \qnum, print it.
-global nquestion
+global nquestion, filename
+
 if not 'nquestion' in globals ():
   nquestion = 0
+  filename = None
 nquestion += 1
 
-## Bypass the test if no \qnum were given, to print everything.
+## Print the filename of the XML file
+if filename != question.get ("filename"):
+  if not filename is None:
+    print ("\\end{enumerate}")
+  filename = question.get ("filename")
+  print ("\\section*{\\texttt{" + filename + "}}")
+  print ("\\begin{enumerate}[resume]")
+
+
+print ("\n\\item ")
+
+## Bypass the following test if no \qnum were given, to print everything.
 print ("\\ifnoqnum\\gdef\\qnum{" + str (nquestion) + "}\\fi")
+
 ## This if holds iff qnum = nquestion
 print ("\\ifnum\qnum=" + str (nquestion) + "")
 
-## Same as minimal.tex
-print ("\\item " + question.text + "\n\n")
+print ("\\begin{preview}")
+
+print (question.text + "\n\n")
 if not isAttrTrue (question, "hideanswers"):
   if isAttrTrue (question, "onepar"):
-    env = "inparaenum"
+    env = "enumerate*"
   else:
     env = "enumerate"
-  print ("\\begin{" + env + "}[A.]")
-  for ans in answers:
-    print ("\\item " + ans.text)
+  print ("\\begin{" + env + "}[label=\\Alph*.]")
+  for (nanswer, ans) in enumerate (answers):
+    print ("\\item ")
     if isAttrTrue (ans, "correct"):
-      print (" (correct)")
+      print ("~[x] ")
+    print (ans.text)
   print ("\\end{" + env + "}")
 points = question.get ("points", "1")
 print ("\\hfill (" + points + "pt" + \
-                ("s" if int (points) > 1 else "") + ")\n")
-
+                 ("s" if int (points) > 1 else "") + ")\n")
+print ("\\end{preview}")
 print ("\\fi")
 %!END_QUESTIONS
 
-\end{preview}
 \end{enumerate}
 \end{document}
+
+% LocalWords:  print
