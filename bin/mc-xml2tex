@@ -17,6 +17,7 @@ class Question:
     answers : List[Element] = field(default_factory=list)
     footer : str = ""
     fixed : bool = False
+    answer : int = -1
 
 def isAttrTrue(elt, field):
     return elt.get (field, "false") != "false"
@@ -63,21 +64,23 @@ def flushQuestions (questions, deltaq):
 
     return footer
 
+#### Template printing
+
 def printUntil (infile, end):
     for line in infile:
         if end and end in line:
             return
         print (line, end = "")
             
-def printPreamble (template):
+def printTemplatePreamble (template):
     printUntil (template, "%!EXTRAPREAMBLE")
 
-def printBeginDocument (template):
+def printTemplateBeginDocument (template):
     printUntil (template, "%!BEGIN_QUESTIONS")
 
 printQuestion = ""
 
-def readPrintQuestions (template):
+def readTemplatePrintQuestions (template):
     global printQuestion
     printQuestion = ""
     for line in template:
@@ -86,28 +89,69 @@ def readPrintQuestions (template):
         printQuestion += line
         
 
-def printEndDocument (template):
+def printTemplateEndDocument (template):
     printUntil (template, False)
-    
-def parseQuestionXML(xmlfile, template, deltaq):
+
+#### XML
+
+def getXMLRoot (xmlfile):
+    if isinstance (xmlfile, str):
+        filename = xmlfile
+        xmlfile = None
+    else:
+        filename = xmlfile.name
+    try:
+        if xmlfile is None:
+            xmlfile = open (filename, "r")
+        regex = re.compile(r"&(?!amp;|lt;|gt;)")
+        content = regex.sub("&amp;", xmlfile.read ())
+        xmlfile.seek (0)
+        return fromstring(content)
+    except Exception as e:
+        print (filename + ": " + str (e) + "\nAborting.", file=sys.stderr)
+        exit (3)
+
+## Print all the preambles in file and within includes, recursively.
+def printXMLPreamble (xmlfile):
+    preamble = ""
+    root = getXMLRoot (xmlfile)
+    if root is None:
+        return
+    npreamble = root.find ("preamble")
+    if npreamble is not None:
+        print (npreamble.text)
+
+    for nxml in root.xpath (".//include"):
+        printXMLPreamble (nxml.get ("file", "/dev/null"))
+
+def getXMLNodes (xmlfile):
+    nodes = []
+    root = getXMLRoot (xmlfile)
+    if root is None:
+        return []
+    for node in root.xpath (".//question | .//flush | .//include"):
+        if node.tag == "include":
+            nodes += getXMLNodes (node.get ("file", "/dev/null"))
+        else:
+            node.set ("filename", xmlfile if isinstance (xmlfile, str) else xmlfile.name)
+            nodes += [node]
+    return nodes
+
+def parseQuestionXML (xmlfile, template, deltaq):
     footer = "%% CORRECT (for mc-tex2quiz, do not remove): "
-    content = ""
     questions = []
-    regex = re.compile(r"&(?!amp;|lt;|gt;)")
-    content = regex.sub("&amp;", xmlfile.read ())
-    root = fromstring(content)
-    printPreamble (template)
-    preamble = root.find ("preamble")
-    if preamble is not None:
-        print (preamble.text)
-    printBeginDocument (template)
-    readPrintQuestions (template)
+
+    printTemplatePreamble (template)
+    printXMLPreamble (xmlfile)
+    printTemplateBeginDocument (template)
+    readTemplatePrintQuestions (template)
 
     ## If no deltaq was provided, try the one in the file, otherwise set to 0.
     if deltaq == -1:
+        root = getXMLRoot (xmlfile)
         deltaq = int (root.get ("deltaq", "0"))
 
-    for nquestion in root.xpath (".//question | .//flush"):
+    for nquestion in getXMLNodes (xmlfile):
         ## Flush tags force the output of the current set of questions.
         if nquestion.tag == "flush":
             footer += flushQuestions (questions, deltaq)
@@ -138,7 +182,7 @@ def parseQuestionXML(xmlfile, template, deltaq):
                 notfixed.append (i)
 
         if correct_choice == -1:
-            print ("ERROR: no correct answer to: " + nquestion.text, file=sys.stderr)
+            print (nquestion.get ("filename") + ": No correct answer to: " + nquestion.text, file=sys.stderr)
             continue
 
         ## Randomize the answers, respecting fixedanswers (question-level) and
@@ -168,7 +212,7 @@ def parseQuestionXML(xmlfile, template, deltaq):
 
     footer += flushQuestions (questions, deltaq)
 
-    printEndDocument (template)
+    printTemplateEndDocument (template)
     print (footer)
 
 def main():
