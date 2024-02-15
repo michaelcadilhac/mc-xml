@@ -52,6 +52,8 @@ def flushQuestions (questions, deltaq):
     if len (questions) == 0:
         return footer
 
+    if flush:
+        exec (flush)
     order = localPermWithFixed (len (questions), deltaq,
                                 [i for i, question in enumerate (questions) if question.fixed])
 
@@ -67,27 +69,37 @@ def flushQuestions (questions, deltaq):
 #### Template printing
 
 def printUntil (infile, end):
+    global lastline
     for line in infile:
-        if end and end in line:
+        if end and any ([x in line for x in end]):
+            lastline = line
             return
         print (line, end = "")
             
 def printTemplatePreamble (template):
-    printUntil (template, "%!EXTRAPREAMBLE")
+    printUntil (template, ["%!EXTRAPREAMBLE"])
 
 def printTemplateBeginDocument (template):
-    printUntil (template, "%!BEGIN_QUESTIONS")
+    printUntil (template, ["%!BEGIN_QUESTIONS", "%!BEGIN_FLUSH"])
 
-printQuestion = ""
 
-def readTemplatePrintQuestions (template):
+def captureUntil (infile, end):
+    ret = ""
+    for line in infile:
+        if end in line:
+            return ret
+        ret += line
+    return ret
+
+def readTemplatePrinters (template):
+    global flush
     global printQuestion
-    printQuestion = ""
-    for line in template:
-        if "%!END_QUESTIONS" in line:
-            return
-        printQuestion += line
-        
+    global lastline
+    flush = False
+    if lastline == "%!BEGIN_FLUSH\n":
+        flush = captureUntil (template, "%!END_FLUSH")
+        printUntil (template, ["%!BEGIN_QUESTIONS"])
+    printQuestion = captureUntil (template, "%!END_QUESTIONS")
 
 def printTemplateEndDocument (template):
     printUntil (template, False)
@@ -144,7 +156,7 @@ def parseQuestionXML (xmlfile, template, deltaq):
     printTemplatePreamble (template)
     printXMLPreamble (xmlfile)
     printTemplateBeginDocument (template)
-    readTemplatePrintQuestions (template)
+    readTemplatePrinters (template)
 
     ## If no deltaq was provided, try the one in the file, otherwise set to 0.
     if deltaq == -1:
@@ -152,6 +164,9 @@ def parseQuestionXML (xmlfile, template, deltaq):
         deltaq = int (root.get ("deltaq", "0"))
 
     for nquestion in getXMLNodes (xmlfile):
+        if isAttrTrue (nquestion, "skip"):
+            continue
+        
         ## Flush tags force the output of the current set of questions.
         if nquestion.tag == "flush":
             footer += flushQuestions (questions, deltaq)
