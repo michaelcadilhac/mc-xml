@@ -52,8 +52,8 @@ def flushQuestions (questions, deltaq):
     if len (questions) == 0:
         return footer
 
-    if flush:
-        exec (flush)
+    if flushCode:
+        exec (flushCode)
     order = localPermWithFixed (len (questions), deltaq,
                                 [i for i, question in enumerate (questions) if question.fixed])
 
@@ -92,12 +92,12 @@ def captureUntil (infile, end):
     return ret
 
 def readTemplatePrinters (template):
-    global flush
+    global flushCode
     global printQuestion
     global lastline
-    flush = False
+    flushCode = False
     if lastline == "%!BEGIN_FLUSH\n":
-        flush = captureUntil (template, "%!END_FLUSH")
+        flushCode = captureUntil (template, "%!END_FLUSH")
         printUntil (template, ["%!BEGIN_QUESTIONS"])
     printQuestion = captureUntil (template, "%!END_QUESTIONS")
 
@@ -150,6 +150,7 @@ def getXMLNodes (xmlfile):
     return nodes
 
 def parseQuestionXML (xmlfile, template, deltaq):
+    global flush
     footer = "%% CORRECT (for mc-tex2quiz, do not remove): "
     questions = []
 
@@ -169,6 +170,7 @@ def parseQuestionXML (xmlfile, template, deltaq):
         
         ## Flush tags force the output of the current set of questions.
         if nquestion.tag == "flush":
+            flush = nquestion
             footer += flushQuestions (questions, deltaq)
             questions = []
             continue
@@ -225,7 +227,9 @@ def parseQuestionXML (xmlfile, template, deltaq):
 
         questions.append (question)
 
-    footer += flushQuestions (questions, deltaq)
+    if len (questions) > 0:
+        flush = False
+        footer += flushQuestions (questions, deltaq)
 
     printTemplateEndDocument (template)
     print (footer)
