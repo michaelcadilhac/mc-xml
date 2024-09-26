@@ -35,7 +35,7 @@ def md5file (fname):
     return hash_md5.hexdigest()
 
 def prepquestion (question, args):
-    qnum, points, correct, nchoices = re.findall ('\d+', question)
+    qnum, points, correct, nchoices = re.findall (r'\d+', question)
     jobname = os.path.splitext (os.path.basename (args.infile.name))[0] + "-" + qnum
     pretex = r'\def\qnum{' + str (qnum) + '}'
     cmd = args.latexmk + [ '-jobname=' + jobname, '-pretex=' + pretex,
@@ -68,10 +68,10 @@ def prepquestion (question, args):
 def tex2quiz (args):
     correct = args.infile.readlines()[-1]
     nq = 0
-    for question in re.findall ('\d+@\d+: \d+/\d+', correct):
+    for question in re.findall (r'\d+@\d+: \d+/\d+', correct):
         nq += 1
         print ("Preparing question " + str (nq))
-        if (nq != int (re.findall ('\d+', question)[0])):
+        if (nq != int (re.findall (r'\d+', question)[0])):
             print ("warning: questions do not appear in order in the footer")
             print ("         this should not happen if the mc-xml2tex is used, so")
             print ("         let's hope you know what you are doing")
@@ -98,7 +98,7 @@ def main():
     parser.add_argument ('-B', '--build-dir', type=str, dest='builddir', default=DEFAULT_BUILD_DIR,
                          help='The directory in which PDFs and aux files go before being converted to PNGs.')
     args = parser.parse_args ()
-    args.latexmk = re.split ('\s+', args.latexmk)
+    args.latexmk = re.split (r'\s+', args.latexmk)
     os.makedirs (args.picsdir, exist_ok=True)
     os.makedirs (args.builddir, exist_ok=True)
     tex2quiz (args)
